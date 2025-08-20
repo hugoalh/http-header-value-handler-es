@@ -5,35 +5,42 @@ const brackets: readonly BracketPair[] = [
 	["[", "]"],
 	["{", "}"]
 ];
-function getTextLengthOfBracket(input: string): number {
-	return Math.max(...brackets.map(([open, close]: BracketPair): number => {
-		if (input[0] !== open) {
-			return 0;
-		}
-		let cursor: number = 1;
-		let stack: number = 1;
-		while (cursor < input.length) {
-			const lengthQuote: number = getTextLengthOfQuote(input.slice(cursor));
-			if (lengthQuote > 0) {
-				cursor += lengthQuote;
-				continue;
-			}
-			if (input[cursor] === open) {
-				cursor += 1;
-				stack += 1;
-				continue;
-			}
-			if (input[cursor] === close) {
-				cursor += 1;
-				stack -= 1;
-				if (stack === 0) {
-					return cursor;
-				}
-				continue;
-			}
-			cursor += 1;
-		}
+function getTextLengthOfBracketSpecify(input: string, pair: BracketPair): number {
+	const [
+		open,
+		close
+	]: BracketPair = pair;
+	if (input[0] !== open) {
 		return 0;
+	}
+	let cursor: number = 1;
+	let stack: number = 1;
+	while (cursor < input.length) {
+		const lengthQuote: number = getTextLengthOfQuote(input.slice(cursor));
+		if (lengthQuote > 0) {
+			cursor += lengthQuote;
+			continue;
+		}
+		if (input[cursor] === open) {
+			cursor += 1;
+			stack += 1;
+			continue;
+		}
+		if (input[cursor] === close) {
+			cursor += 1;
+			stack -= 1;
+			if (stack === 0) {
+				return cursor;
+			}
+			continue;
+		}
+		cursor += 1;
+	}
+	return 0;
+}
+function getTextLengthOfBracketAny(input: string): number {
+	return Math.max(...brackets.map((pair: BracketPair): number => {
+		return getTextLengthOfBracketSpecify(input, pair);
 	}));
 }
 function getTextLengthOfQuote(input: string): number {
@@ -49,13 +56,13 @@ function getTextLengthOfQuote(input: string): number {
 	}
 	return 0;
 }
-function getTextLength(separatorDeterminer: typeof isSeparatorComma | typeof isSeparatorForParameters, input: string): number {
+function getTextLength(input: string): number {
 	let cursor: number = 0;
 	while (cursor < input.length) {
-		if (separatorDeterminer(input[cursor])) {
+		if (isSeparator(input[cursor])) {
 			break;
 		}
-		const lengthBracket: number = getTextLengthOfBracket(input.slice(cursor));
+		const lengthBracket: number = getTextLengthOfBracketAny(input.slice(cursor));
 		if (lengthBracket > 0) {
 			cursor += lengthBracket;
 			continue;
@@ -72,12 +79,9 @@ function getTextLength(separatorDeterminer: typeof isSeparatorComma | typeof isS
 function getLengthWhitespace(input: string): number {
 	return (input.length - input.trimStart().length);
 }
-function isSeparatorComma(character: string): boolean {
-	return (character[0] === ",");
-}
-function isSeparatorForParameters(character: string): boolean {
+function isSeparator(character: string): boolean {
 	return (
-		isSeparatorComma(character) ||
+		character[0] === "," ||
 		character[0] === ";" ||
 		character[0] === "="
 	);
@@ -115,45 +119,19 @@ function enQuoteOnDemand(input: string): string {
 	}
 	return input;
 }
-function* splitHTTPHeaderValueWithoutParameterInternal(input: string): Generator<string> {
-	let index: number = getLengthWhitespace(input);
-	if (isSeparatorComma(input[index])) {
-		throw new SyntaxError(`Unexpected separator character \`${input[index]}\` at index ${index}!`);
-	}
-	while (index < input.length) {
-		const length: number = getTextLength(isSeparatorComma, input.slice(index));
-		if (length === 0) {
-			throw new SyntaxError(`Unexpected empty at index ${index}!`);
-		}
-		yield deQuoteSafe(input.slice(index, index + length));
-		index += length;
-		index += getLengthWhitespace(input.slice(index));
-		if (!(index < input.length)) {
-			break;
-		}
-		if (!isSeparatorComma(input[index])) {
-			throw new SyntaxError(`Unexpected character \`${input[index]}\` at index ${index}!`);
-		}
-		index += 1;
-		index += getLengthWhitespace(input.slice(index));
-		if (!(index < input.length)) {
-			throw new SyntaxError(`Unexpected end of HTTP header value after separator \`,\` at index ${index}!`);
-		}
-	}
-}
 /**
  * Token for parameter of the HTTP header value.
  */
 export type HTTPHeaderValueTokenParameter = [key: string, value: string];
-function* splitHTTPHeaderValueWithParameterInternal(input: string): Generator<(string | HTTPHeaderValueTokenParameter)[]> {
+function* splitHTTPHeaderValueInternal(input: string): Generator<(string | HTTPHeaderValueTokenParameter)[]> {
 	let index: number = getLengthWhitespace(input);
-	if (isSeparatorForParameters(input[index])) {
+	if (isSeparator(input[index])) {
 		throw new SyntaxError(`Unexpected separator character \`${input[index]}\` at index ${index}!`);
 	}
 	while (index < input.length) {
 		const group: (string | HTTPHeaderValueTokenParameter)[] = [];
 		while (index < input.length) {
-			const keyLength: number = getTextLength(isSeparatorForParameters, input.slice(index));
+			const keyLength: number = getTextLength(input.slice(index));
 			if (keyLength === 0) {
 				throw new SyntaxError(`Unexpected empty at index ${index}!`);
 			}
@@ -164,7 +142,7 @@ function* splitHTTPHeaderValueWithParameterInternal(input: string): Generator<(s
 				group.push(key);
 				break;
 			}
-			if (!isSeparatorForParameters(input[index])) {
+			if (!isSeparator(input[index])) {
 				throw new SyntaxError(`Unexpected character \`${input[index]}\` at index ${index}!`);
 			}
 			if (input[index] === ",") {
@@ -185,7 +163,7 @@ function* splitHTTPHeaderValueWithParameterInternal(input: string): Generator<(s
 			if (!(index < input.length)) {
 				throw new SyntaxError(`Unexpected end of HTTP header value after separator \`=\` at index ${index}!`);
 			}
-			const valueLength: number = getTextLength(isSeparatorForParameters, input.slice(index));
+			const valueLength: number = getTextLength(input.slice(index));
 			if (valueLength === 0) {
 				throw new SyntaxError(`Unexpected empty at index ${index}!`);
 			}
@@ -196,7 +174,7 @@ function* splitHTTPHeaderValueWithParameterInternal(input: string): Generator<(s
 			if (!(index < input.length)) {
 				break;
 			}
-			if (!isSeparatorForParameters(input[index])) {
+			if (!isSeparator(input[index])) {
 				throw new SyntaxError(`Unexpected character \`${input[index]}\` at index ${index}!`);
 			}
 			if (input[index] === "=") {
@@ -224,27 +202,12 @@ function* splitHTTPHeaderValueWithParameterInternal(input: string): Generator<(s
 	}
 }
 /**
- * Split the HTTP header value, where the value is only separate by comma (`,`).
- * 
- * If not sure the HTTP header value syntax, use function {@linkcode splitHTTPHeaderValueWithParameter} instead.
- * @param {string} input HTTP header value that need to split.
- * @returns {string[]}
- * @example
- * ```ts
- * splitHTTPHeaderValueWithoutParameter(`gzip, deflate, br, zstd`);
- * //=> ["gzip", "deflate", "br", "zstd"]
- * ```
- */
-export function splitHTTPHeaderValueWithoutParameter(input: string): string[] {
-	return Array.from(splitHTTPHeaderValueWithoutParameterInternal(input));
-}
-/**
- * Split the HTTP header value, where the value maybe contain parameters, values, or both.
+ * Split the HTTP header value.
  * @param {string} input HTTP header value that need to split.
  * @returns {(string | HTTPHeaderValueTokenParameter)[][]}
  * @example
  * ```ts
- * splitHTTPHeaderValueWithParameter(`br;q=1.0, gzip;q=0.8, *;q=0.1`);
+ * splitHTTPHeaderValue(`br;q=1.0, gzip;q=0.8, *;q=0.1`);
  * /*=>
  * [
  *   ["br", ["q", "1.0"]],
@@ -253,41 +216,17 @@ export function splitHTTPHeaderValueWithoutParameter(input: string): string[] {
  * ]
  * ```
  */
-export function splitHTTPHeaderValueWithParameter(input: string): (string | HTTPHeaderValueTokenParameter)[][] {
-	return Array.from(splitHTTPHeaderValueWithParameterInternal(input));
+export function splitHTTPHeaderValue(input: string): (string | HTTPHeaderValueTokenParameter)[][] {
+	return Array.from(splitHTTPHeaderValueInternal(input));
 }
-/**
- * (See {@linkcode HTTPHeaderValueParseOptions.parameterKeysOnDuplicatedAction}.)
- */
-export type HTTPHeaderValueParseParameterKeysOnDuplicatedAction =
-	| "throw"
-	| "use-new"
-	| "use-old";
-const parameterKeysOnDuplicatedActions: readonly HTTPHeaderValueParseParameterKeysOnDuplicatedAction[] = [
-	"throw",
-	"use-new",
-	"use-old"
-];
-/**
- * Options of the {@linkcode parseHTTPHeaderValue}.
- */
-export interface HTTPHeaderValueParseOptions {
+export interface HTTPHeaderValueOptions {
 	/**
-	 * Whether the parameter keys are case sensitive. Some of the HTTP headers value maybe have case sensitive parameter keys.
+	 * Whether the parameters key are case sensitive. Few of the HTTP headers value accept case sensitive parameters key.
 	 * 
-	 * If this property is defined to `false`, the parameter keys are all convert to lower case.
+	 * If this property is defined to `false`, the parameters key are all convert to lower case.
 	 * @default {false}
 	 */
-	parameterKeysCaseSensitive?: boolean;
-	/**
-	 * Action when the parameter keys are duplicated.
-	 * 
-	 * - **`"throw"`:** Throw an error.
-	 * - **`"use-new"`:** Use new parameter value.
-	 * - **`"use-old"`:** Use old parameter value.
-	 * @default {"throw"}
-	 */
-	parameterKeysOnDuplicatedAction?: HTTPHeaderValueParseParameterKeysOnDuplicatedAction;
+	parametersKeyCaseSensitive?: boolean;
 }
 /**
  * Element context of the HTTP header value.
@@ -299,7 +238,7 @@ export interface HTTPHeaderValueElementContext {
 /**
  * Parse the HTTP header value.
  * @param {string} input HTTP header value that need to parse.
- * @param {HTTPHeaderValueParseOptions} [options={}] Options.
+ * @param {HTTPHeaderValueOptions} [options={}] Options.
  * @returns {HTTPHeaderValueElementContext[]} Context of the HTTP header value.
  * @example
  * ```ts
@@ -327,15 +266,9 @@ export interface HTTPHeaderValueElementContext {
  * ]
  * ```
  */
-export function parseHTTPHeaderValue(input: string, options: HTTPHeaderValueParseOptions = {}): HTTPHeaderValueElementContext[] {
-	const {
-		parameterKeysCaseSensitive = false,
-		parameterKeysOnDuplicatedAction = "throw"
-	}: HTTPHeaderValueParseOptions = options;
-	if (!parameterKeysOnDuplicatedActions.includes(parameterKeysOnDuplicatedAction)) {
-		throw new RangeError(`\`${parameterKeysOnDuplicatedAction}\` is not a valid action! Only accept these values: ${parameterKeysOnDuplicatedActions.join(", ")}`);
-	}
-	return Array.from(splitHTTPHeaderValueWithParameterInternal(input), (group: (string | HTTPHeaderValueTokenParameter)[]): HTTPHeaderValueElementContext => {
+export function parseHTTPHeaderValue(input: string, options: HTTPHeaderValueOptions = {}): HTTPHeaderValueElementContext[] {
+	const { parametersKeyCaseSensitive = false }: HTTPHeaderValueOptions = options;
+	return Array.from(splitHTTPHeaderValueInternal(input), (group: (string | HTTPHeaderValueTokenParameter)[]): HTTPHeaderValueElementContext => {
 		const result: HTTPHeaderValueElementContext = {
 			parameters: {}
 		};
@@ -348,20 +281,16 @@ export function parseHTTPHeaderValue(input: string, options: HTTPHeaderValuePars
 			let key: string;
 			let value: string;
 			if (typeof element === "string") {
-				key = parameterKeysCaseSensitive ? element : element.toLowerCase();
+				key = parametersKeyCaseSensitive ? element : element.toLowerCase();
 				value = "";
 			} else {
-				key = parameterKeysCaseSensitive ? element[0] : element[0].toLowerCase();
+				key = parametersKeyCaseSensitive ? element[0] : element[0].toLowerCase();
 				value = element[1];
 			}
-			if (
-				typeof result.parameters[key] === "undefined" ||
-				parameterKeysOnDuplicatedAction === "use-new"
-			) {
-				result.parameters[key] = value;
-			} else if (parameterKeysOnDuplicatedAction === "throw") {
+			if (typeof result.parameters[key] !== "undefined") {
 				throw new SyntaxError(`Parameter key \`${key}\` is duplicated!`);
 			}
+			result.parameters[key] = value;
 		}
 		return result;
 	});

@@ -59,10 +59,7 @@ This serves most of the HTTP header value with general functions of syntax check
   function parseHTTPHeaderValue(input: string, options: HTTPHeaderValueParseOptions = {}): HTTPHeaderValueElementContext[];
   ```
 - ```ts
-  function splitHTTPHeaderValueWithoutParameter(input: string): string[];
-  ```
-- ```ts
-  function splitHTTPHeaderValueWithParameter(input: string): (string | HTTPHeaderValueTokenParameter)[][];
+  function splitHTTPHeaderValue(input: string): (string | HTTPHeaderValueTokenParameter)[][];
   ```
 - ```ts
   function stringifyHTTPHeaderValueFromContexts(input: readonly HTTPHeaderValueElementContext[]): string;
