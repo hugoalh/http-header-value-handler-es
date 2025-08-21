@@ -76,14 +76,7 @@ This serves most of the HTTP header value with general functions of syntax check
 - ```ts
   interface HTTPHeaderValueParseOptions {
     parameterKeysCaseSensitive?: boolean;
-    parameterKeysOnDuplicatedAction?: HTTPHeaderValueParseParameterKeysOnDuplicatedAction;
   }
-  ```
-- ```ts
-  type HTTPHeaderValueParseParameterKeysOnDuplicatedAction =
-    | "throw"
-    | "use-new"
-    | "use-old";
   ```
 - ```ts
   type HTTPHeaderValueTokenParameter = [key: string, value: string];
@@ -98,12 +91,11 @@ This serves most of the HTTP header value with general functions of syntax check
 
 - ```ts
   splitHTTPHeaderValueWithParameter(`text/html, application/xhtml+xml, application/xml;q=0.9, image/webp`);
-  /*=>
-  [
-    ["text/html"],
-    ["application/xhtml+xml"],
-    ["application/xml", ["q", "0.9"]],
-    ["image/webp"]
-  ]
-  */
+  //=>
+  //  [
+  //    ["text/html"],
+  //    ["application/xhtml+xml"],
+  //    ["application/xml", ["q", "0.9"]],
+  //    ["image/webp"]
+  //  ]
   ```

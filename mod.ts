@@ -1,3 +1,5 @@
+import { isStringASCIIPrintable } from "https://raw.githubusercontent.com/hugoalh/is-string-ascii-es/v1.1.5/printable.ts";
+//#region Bracket
 type BracketPair = readonly [open: string, close: string];
 const brackets: readonly BracketPair[] = [
 	["(", ")"],
@@ -5,7 +7,7 @@ const brackets: readonly BracketPair[] = [
 	["[", "]"],
 	["{", "}"]
 ];
-function getTextLengthOfBracketSpecify(input: string, pair: BracketPair): number {
+function getBracketedLengthSpecifyInternal(input: string, pair: BracketPair): number {
 	const [
 		open,
 		close
@@ -16,7 +18,7 @@ function getTextLengthOfBracketSpecify(input: string, pair: BracketPair): number
 	let cursor: number = 1;
 	let stack: number = 1;
 	while (cursor < input.length) {
-		const lengthQuote: number = getTextLengthOfQuote(input.slice(cursor));
+		const lengthQuote: number = getDoubleQuotedLength(input.slice(cursor));
 		if (lengthQuote > 0) {
 			cursor += lengthQuote;
 			continue;
@@ -38,12 +40,159 @@ function getTextLengthOfBracketSpecify(input: string, pair: BracketPair): number
 	}
 	return 0;
 }
-function getTextLengthOfBracketAny(input: string): number {
+/**
+ * Get the length of the text which bracketed with specify bracket, which the text must start with specify bracket.
+ * @param {string} input Text.
+ * @param {BracketPair} pair Bracket pair.
+ * @returns {number} Length of the text which bracketed with specify bracket.
+ */
+export function getBracketedLengthSpecify(input: string, pair: BracketPair): number {
+	if (!brackets.some((bracket: BracketPair): boolean => {
+		return (pair[0] === bracket[0] && pair[1] === bracket[1]);
+	})) {
+		throw new SyntaxError(`${pair.join("")} is not a valid bracket pair!`);
+	}
+	return getBracketedLengthSpecifyInternal(input, pair);
+}
+/**
+ * Get the length of the text which bracketed with any bracket, which the text must start with any bracket.
+ * @param {string} input Text.
+ * @returns {number} Length of the text which bracketed with any bracket.
+ */
+export function getBracketedLengthAny(input: string): number {
 	return Math.max(...brackets.map((pair: BracketPair): number => {
-		return getTextLengthOfBracketSpecify(input, pair);
+		return getBracketedLengthSpecifyInternal(input, pair);
 	}));
 }
-function getTextLengthOfQuote(input: string): number {
+//#endregion
+//#region Encode
+/**
+ * Decode the HTTP header parameter value, according to the specification RFC 8187.
+ * @param {string} input The HTTP header parameter value that need to decode.
+ * @returns {string} A decoded HTTP header parameter value.
+ * @example
+ * ```ts
+ * decodeHTTPHeaderParameterValue("UTF-8'en'%E2%82%AC%20rates");
+ * //=> "€ rates"
+ * ```
+ */
+export function decodeHTTPHeaderParameterValue(input: string): string {
+	const {
+		charset = "",
+		encoded = "",
+		language = ""
+	} = input.match(/^(?<charset>.+?)'(?<language>.*?)'(?<encoded>.+)$/u)?.groups ?? {};
+	if (
+		charset.length === 0 ||
+		encoded.length === 0 ||
+		!isStringASCIIPrintable(charset) ||
+		!isStringASCIIPrintable(encoded) ||
+		!isStringASCIIPrintable(language)
+	) {
+		throw new SyntaxError(`\`${input}\` is not a valid encoded HTTP header parameter value!`);
+	}
+	const decoded: string = decodeURIComponent(encoded);
+	const charsetFmt: string = charset.toLowerCase();
+	if (
+		charsetFmt === "utf-8" ||
+		charsetFmt === "utf8"
+	) {
+		return decoded;
+	}
+	return new TextDecoder(charsetFmt).decode(new TextEncoder().encode(decoded));
+}
+export interface EncodeHTTPHeaderParameterValueResult {
+	/**
+	 * Whether the {@linkcode value} is encoded.
+	 */
+	encoded: boolean;
+	value: string;
+}
+/**
+ * Encode the HTTP header parameter value, if need, according to the specification RFC 8187.
+ * @param {string} input The HTTP header parameter value that maybe need to encode.
+ * @param {string} [languageCode=""] Language code of the HTTP header parameter value.
+ * @returns {EncodeHTTPHeaderParameterValueResult} Result.
+ * @example
+ * ```ts
+ * encodeHTTPHeaderParameterValueOnNeed("€ rates");
+ * //=>
+ * //  {
+ * //    encoded: true,
+ * //    value: "UTF-8''%E2%82%AC%20rates"
+ * //  }
+ * ```
+ * @example
+ * ```ts
+ * encodeHTTPHeaderParameterValueOnNeed("€ rates", "en");
+ * //=>
+ * //  {
+ * //    encoded: true,
+ * //    value: "UTF-8'en'%E2%82%AC%20rates"
+ * //  }
+ * ```
+ */
+export function encodeHTTPHeaderParameterValueOnNeed(input: string, languageCode: string = ""): EncodeHTTPHeaderParameterValueResult {
+	if (!isStringASCIIPrintable(languageCode)) {
+		throw new SyntaxError(`\`${languageCode}\` is not a valid HTTP header parameter value language code!`);
+	}
+	if (isStringASCIIPrintable(input)) {
+		return {
+			encoded: false,
+			value: input
+		};
+	}
+	return {
+		encoded: true,
+		value: `UTF-8'${languageCode}'${encodeURIComponent(input)}`
+	};
+}
+//#endregion
+//#region Quote
+/**
+ * De-quote the text which double quoted, if possible.
+ * @param {string} input Text that maybe possible to de-quote.
+ * @returns {string} The de-quoted text, or the original text.
+ * @example
+ * ```ts
+ * deDoubleQuoteOnNeed(`"foobar"`);
+ * //=> `foobar`
+ * ```
+ * @example
+ * ```ts
+ * deDoubleQuoteOnNeed(`foobar`);
+ * //=> `foobar`
+ * ```
+ */
+export function deDoubleQuoteOnNeed(input: string): string {
+	if (input.length === getDoubleQuotedLength(input)) {
+		return JSON.parse(input) as string;
+	}
+	return input;
+}
+/**
+ * En-quote the text with double quote, if need.
+ * @param {string} input Text that maybe need to en-quote.
+ * @returns {string} The en-quoted text, or the original text.
+ */
+export function enDoubleQuoteOnNeed(input: string): string {
+	if (
+		input.includes(" ") ||
+		input.includes("\"") ||
+		input.includes(",") ||
+		input.includes(";") ||
+		input.includes("=")
+	) {
+		return JSON.stringify(input);
+	}
+	return input;
+}
+/**
+ * Get the length of the text which double quoted, which the text must start with double quote.
+ * @param {string} input Text.
+ * @returns {number} Length of the text which double quoted.
+ */
+export function getDoubleQuotedLength(input: string): number {
 	if (input[0] !== "\"") {
 		return 0;
 	}
@@ -56,18 +205,20 @@ function getTextLengthOfQuote(input: string): number {
 	}
 	return 0;
 }
+//#endregion
+//#region Split
 function getTextLength(input: string): number {
 	let cursor: number = 0;
 	while (cursor < input.length) {
-		if (isSeparator(input[cursor])) {
+		if (isHTTPHeaderValueSeparator(input[cursor])) {
 			break;
 		}
-		const lengthBracket: number = getTextLengthOfBracketAny(input.slice(cursor));
+		const lengthBracket: number = getBracketedLengthAny(input.slice(cursor));
 		if (lengthBracket > 0) {
 			cursor += lengthBracket;
 			continue;
 		}
-		const lengthQuote: number = getTextLengthOfQuote(input.slice(cursor));
+		const lengthQuote: number = getDoubleQuotedLength(input.slice(cursor));
 		if (lengthQuote > 0) {
 			cursor += lengthQuote;
 			continue;
@@ -76,10 +227,10 @@ function getTextLength(input: string): number {
 	}
 	return input.slice(0, cursor).trimEnd().length;
 }
-function getLengthWhitespace(input: string): number {
+function getWhitespaceLength(input: string): number {
 	return (input.length - input.trimStart().length);
 }
-function isSeparator(character: string): boolean {
+function isHTTPHeaderValueSeparator(character: string): boolean {
 	return (
 		character[0] === "," ||
 		character[0] === ";" ||
@@ -87,62 +238,29 @@ function isSeparator(character: string): boolean {
 	);
 }
 /**
- * De-quote the double quoted text, if possible.
- * @example
- * ```ts
- * deQuoteSafe(`"foobar"`);
- * //=> `foobar`
- * ```
- * @example
- * ```ts
- * deQuoteSafe(`foobar`);
- * //=> `foobar`
- * ```
- */
-function deQuoteSafe(input: string): string {
-	if (getTextLengthOfQuote(input) === input.length) {
-		return JSON.parse(input) as string;
-	}
-	return input;
-}
-/**
- * En-quote the text with double quote, if need.
- */
-function enQuoteOnDemand(input: string): string {
-	if (
-		input.includes("\"") ||
-		input.includes(",") ||
-		input.includes(";") ||
-		input.includes("=")
-	) {
-		return JSON.stringify(input);
-	}
-	return input;
-}
-/**
  * Token for parameter of the HTTP header value.
  */
 export type HTTPHeaderValueTokenParameter = [key: string, value: string];
 function* splitHTTPHeaderValueInternal(input: string): Generator<(string | HTTPHeaderValueTokenParameter)[]> {
-	let index: number = getLengthWhitespace(input);
-	if (isSeparator(input[index])) {
-		throw new SyntaxError(`Unexpected separator character \`${input[index]}\` at index ${index}!`);
+	let index: number = getWhitespaceLength(input);
+	if (isHTTPHeaderValueSeparator(input[index])) {
+		throw new SyntaxError(`Unexpected HTTP header value separator \`${input[index]}\` at index ${index}!`);
 	}
 	while (index < input.length) {
 		const group: (string | HTTPHeaderValueTokenParameter)[] = [];
 		while (index < input.length) {
 			const keyLength: number = getTextLength(input.slice(index));
 			if (keyLength === 0) {
-				throw new SyntaxError(`Unexpected empty at index ${index}!`);
+				throw new SyntaxError(`Unexpected empty text at index ${index}!`);
 			}
-			const key: string = deQuoteSafe(input.slice(index, index + keyLength));
+			const key: string = deDoubleQuoteOnNeed(input.slice(index, index + keyLength));
 			index += keyLength;
-			index += getLengthWhitespace(input.slice(index));
+			index += getWhitespaceLength(input.slice(index));
 			if (!(index < input.length)) {
 				group.push(key);
 				break;
 			}
-			if (!isSeparator(input[index])) {
+			if (!isHTTPHeaderValueSeparator(input[index])) {
 				throw new SyntaxError(`Unexpected character \`${input[index]}\` at index ${index}!`);
 			}
 			if (input[index] === ",") {
@@ -152,41 +270,41 @@ function* splitHTTPHeaderValueInternal(input: string): Generator<(string | HTTPH
 			if (input[index] === ";") {
 				group.push(key);
 				index += 1;
-				index += getLengthWhitespace(input.slice(index));
+				index += getWhitespaceLength(input.slice(index));
 				if (!(index < input.length)) {
-					throw new SyntaxError(`Unexpected end of HTTP header value after separator \`;\` at index ${index}!`);
+					throw new SyntaxError(`Unexpected end after HTTP header value separator \`;\` at index ${index}!`);
 				}
 				continue;
 			}
 			index += 1;
-			index += getLengthWhitespace(input.slice(index));
+			index += getWhitespaceLength(input.slice(index));
 			if (!(index < input.length)) {
-				throw new SyntaxError(`Unexpected end of HTTP header value after separator \`=\` at index ${index}!`);
+				throw new SyntaxError(`Unexpected end after HTTP header value separator \`=\` at index ${index}!`);
 			}
 			const valueLength: number = getTextLength(input.slice(index));
 			if (valueLength === 0) {
-				throw new SyntaxError(`Unexpected empty at index ${index}!`);
+				throw new SyntaxError(`Unexpected empty text at index ${index}!`);
 			}
-			const value: string = deQuoteSafe(input.slice(index, index + valueLength));
+			const value: string = deDoubleQuoteOnNeed(input.slice(index, index + valueLength));
 			index += valueLength;
 			group.push([key, value]);
-			index += getLengthWhitespace(input.slice(index));
+			index += getWhitespaceLength(input.slice(index));
 			if (!(index < input.length)) {
 				break;
 			}
-			if (!isSeparator(input[index])) {
+			if (!isHTTPHeaderValueSeparator(input[index])) {
 				throw new SyntaxError(`Unexpected character \`${input[index]}\` at index ${index}!`);
 			}
 			if (input[index] === "=") {
-				throw new SyntaxError(`Unexpected separator character \`${input[index]}\` at index ${index}!`);
+				throw new SyntaxError(`Unexpected HTTP header value separator \`${input[index]}\` at index ${index}!`);
 			}
 			if (input[index] === ",") {
 				break;
 			}
 			index += 1;
-			index += getLengthWhitespace(input.slice(index));
+			index += getWhitespaceLength(input.slice(index));
 			if (!(index < input.length)) {
-				throw new SyntaxError(`Unexpected end of HTTP header value after separator \`;\` at index ${index}!`);
+				throw new SyntaxError(`Unexpected end after HTTP header value separator \`;\` at index ${index}!`);
 			}
 		}
 		if (group.length > 0) {
@@ -194,9 +312,9 @@ function* splitHTTPHeaderValueInternal(input: string): Generator<(string | HTTPH
 		}
 		if (input[index] === ",") {
 			index += 1;
-			index += getLengthWhitespace(input.slice(index));
+			index += getWhitespaceLength(input.slice(index));
 			if (!(index < input.length)) {
-				throw new SyntaxError(`Unexpected end of HTTP header value after separator \`,\` at index ${index}!`);
+				throw new SyntaxError(`Unexpected end after HTTP header value separator \`,\` at index ${index}!`);
 			}
 		}
 	}
@@ -208,17 +326,19 @@ function* splitHTTPHeaderValueInternal(input: string): Generator<(string | HTTPH
  * @example
  * ```ts
  * splitHTTPHeaderValue(`br;q=1.0, gzip;q=0.8, *;q=0.1`);
- * /*=>
- * [
- *   ["br", ["q", "1.0"]],
- *   ["gzip", ["q", "0.8"]],
- *   ["*", ["q", "0.1"]]
- * ]
+ * //=>
+ * //  [
+ * //    ["br", ["q", "1.0"]],
+ * //    ["gzip", ["q", "0.8"]],
+ * //    ["*", ["q", "0.1"]]
+ * //  ]
  * ```
  */
 export function splitHTTPHeaderValue(input: string): (string | HTTPHeaderValueTokenParameter)[][] {
 	return Array.from(splitHTTPHeaderValueInternal(input));
 }
+//#endregion
+//#region Parse
 export interface HTTPHeaderValueOptions {
 	/**
 	 * Whether the parameters key are case sensitive. Few of the HTTP headers value accept case sensitive parameters key.
@@ -243,27 +363,27 @@ export interface HTTPHeaderValueElementContext {
  * @example
  * ```ts
  * parseHTTPHeaderValue(`br;q=1.0, gzip;q=0.8, *;q=0.1`);
- * /*=>
- * [
- *   {
- *     value: "br",
- *     parameters: {
- *       q: "1.0"
- *     }
- *   },
- *   {
- *     value: "gzip",
- *     parameters: {
- *       q: "0.8"
- *     }
- *   },
- *   {
- *     value: "*",
- *     parameters: {
- *       q: "0.1"
- *     }
- *   }
- * ]
+ * //=>
+ * //  [
+ * //    {
+ * //      value: "br",
+ * //      parameters: {
+ * //        q: "1.0"
+ * //      }
+ * //    },
+ * //    {
+ * //      value: "gzip",
+ * //      parameters: {
+ * //        q: "0.8"
+ * //      }
+ * //    },
+ * //    {
+ * //      value: "*",
+ * //      parameters: {
+ * //        q: "0.1"
+ * //      }
+ * //    }
+ * //  ]
  * ```
  */
 export function parseHTTPHeaderValue(input: string, options: HTTPHeaderValueOptions = {}): HTTPHeaderValueElementContext[] {
@@ -287,18 +407,33 @@ export function parseHTTPHeaderValue(input: string, options: HTTPHeaderValueOpti
 				key = parametersKeyCaseSensitive ? element[0] : element[0].toLowerCase();
 				value = element[1];
 			}
-			if (typeof result.parameters[key] !== "undefined") {
-				throw new SyntaxError(`Parameter key \`${key}\` is duplicated!`);
+			if (key.endsWith("*")) {
+				key = key.slice(0, key.length - 1);
+				value = decodeHTTPHeaderParameterValue(value);
+			} else {
+				if (typeof result.parameters[key] !== "undefined") {
+					throw new SyntaxError(`Parameter key \`${key}\` is duplicated!`);
+				}
 			}
 			result.parameters[key] = value;
 		}
 		return result;
 	});
 }
+//#endregion
+//#region Stringify
 function stringifyHTTPHeaderValueInternal(input: readonly (readonly (string | HTTPHeaderValueTokenParameter)[])[]): string {
 	return input.map((group: readonly (string | HTTPHeaderValueTokenParameter)[]): string => {
 		return group.map((element: string | HTTPHeaderValueTokenParameter): string => {
-			return ((typeof element === "string") ? enQuoteOnDemand(element) : `${enQuoteOnDemand(element[0])}=${enQuoteOnDemand(element[1])}`);
+			if (typeof element === "string") {
+				return enDoubleQuoteOnNeed(element);
+			}
+			const [
+				key,
+				value
+			]: HTTPHeaderValueTokenParameter = element;
+			const valueEncodeResult: EncodeHTTPHeaderParameterValueResult = encodeHTTPHeaderParameterValueOnNeed(value);
+			return `${enDoubleQuoteOnNeed(`${key}${valueEncodeResult.encoded ? "*" : ""}`)}=${enDoubleQuoteOnNeed(valueEncodeResult.value)}`;
 		}).join("; ");
 	}).join(", ");
 }
@@ -360,3 +495,4 @@ export function stringifyHTTPHeaderValueFromTokens(input: readonly (readonly (st
 	}
 	return stringifyHTTPHeaderValueInternal(input);
 }
+//#endregion
