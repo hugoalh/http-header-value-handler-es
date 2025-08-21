@@ -11,6 +11,13 @@ await invokeDenoNodeJSTransformer({
 	entrypoints: configJSR.getExports(),
 	fixInjectedImports: true,
 	generateDeclarationMap: true,
+	mappings: {
+		"https://raw.githubusercontent.com/hugoalh/is-string-ascii-es/v1.1.5/printable.ts": {
+			name: "@hugoalh/is-string-ascii",
+			version: "^1.1.5",
+			subPath: "printable"
+		}
+	},
 	metadata: {
 		name: configJSR.getName(),
 		version: configJSR.getVersion(),
