@@ -79,15 +79,12 @@ export function getBracketedLengthAny(input: string): number {
 export function decodeHTTPHeaderParameterValue(input: string): string {
 	const {
 		charset = "",
-		encoded = "",
-		language = ""
-	} = input.match(/^(?<charset>.+?)'(?<language>.*?)'(?<encoded>.+)$/u)?.groups ?? {};
+		encoded = ""
+	} = input.match(/^(?<charset>.+?)'.*?'(?<encoded>.+)$/u)?.groups ?? {};
 	if (
+		!isStringASCIIPrintable(input) ||
 		charset.length === 0 ||
-		encoded.length === 0 ||
-		!isStringASCIIPrintable(charset) ||
-		!isStringASCIIPrintable(encoded) ||
-		!isStringASCIIPrintable(language)
+		encoded.length === 0
 	) {
 		throw new SyntaxError(`\`${input}\` is not a valid encoded HTTP header parameter value!`);
 	}
@@ -408,8 +405,12 @@ export function parseHTTPHeaderValue(input: string, options: HTTPHeaderValueOpti
 				value = element[1];
 			}
 			if (key.endsWith("*")) {
+				try {
+					value = decodeHTTPHeaderParameterValue(value);
+				} catch {
+					throw new SyntaxError(`Parameter \`${key}=${value}\` is not a valid encoded HTTP header parameter!`);
+				}
 				key = key.slice(0, key.length - 1);
-				value = decodeHTTPHeaderParameterValue(value);
 			} else {
 				if (typeof result.parameters[key] !== "undefined") {
 					throw new SyntaxError(`Parameter key \`${key}\` is duplicated!`);

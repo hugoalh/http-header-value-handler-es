@@ -1,4 +1,7 @@
-import { deepStrictEqual } from "node:assert";
+import {
+	deepStrictEqual,
+	throws
+} from "node:assert";
 import { splitHTTPHeaderValue } from "./mod.ts";
 Deno.test("Accept 1", { permissions: "none" }, () => {
 	const result = [
@@ -289,4 +292,9 @@ Deno.test("X-Forwarded-For 1", { permissions: "none" }, () => {
 		["proxy1"],
 		["proxy2"]
 	]);
+});
+Deno.test("Invalid 1", { permissions: "none" }, () => {
+	throws(() => {
+		splitHTTPHeaderValue(`text/html, application/xhtml+xml, application/xml;q=0.9, image/webp, */*;q=0.8,`);
+	});
 });
