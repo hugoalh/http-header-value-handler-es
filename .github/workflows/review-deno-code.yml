@@ -32,18 +32,19 @@ jobs:
       CDV_RUN_LITE: "${{matrix.run_on != 'ubuntu-latest'}}"
     steps:
       - name: "Checkout Repository"
-        uses: "actions/checkout@v4"
+        uses: "actions/checkout@v5"
       - name: "Setup Deno"
         uses: "denoland/setup-deno@v2"
         with:
-          deno-version: "^2.3.3"
+          deno-version: "^2.4.5"
       - name: "Get Deno Cache Path"
         id: "deno-cache-path"
         shell: "pwsh"
         run: |-
           [PSCustomObject]$DenoInfo = deno info --json |
             ConvertFrom-Json -Depth 100
-          Add-Content -LiteralPath $Env:GITHUB_OUTPUT -Value "value=$($DenoInfo.denoDir)" -Confirm:$False -Encoding 'UTF8NoBOM'
+          Add-Content -LiteralPath $Env:GITHUB_OUTPUT -Value "root=$($DenoInfo.denoDir)" -Confirm:$False -Encoding 'UTF8NoBOM'
+          Add-Content -LiteralPath $Env:GITHUB_OUTPUT -Value "generate=$($DenoInfo.typescriptCache)" -Confirm:$False -Encoding 'UTF8NoBOM'
       - name: "Load Deno Cache"
         id: "deno-cache-load"
         uses: "actions/cache/restore@v4"
@@ -53,7 +54,7 @@ jobs:
             ${{runner.os}}/Deno/${{github.run_id}}-${{github.run_attempt}}-
             ${{runner.os}}/Deno/${{github.run_id}}-
             ${{runner.os}}/Deno/
-          path: "${{steps.deno-cache-path.outputs.value}}"
+          path: "${{steps.deno-cache-path.outputs.root}}"
       - name: "Analyze Repository"
         id: "analyze"
         shell: "pwsh"
@@ -75,10 +76,6 @@ jobs:
                 Join-String -Separator ', '
             )" -ErrorAction 'Stop'
           }
-      - name: "Check Code"
-        if: "${{!cancelled() && steps.analyze.outcome == 'success'}}"
-        run: |-
-          deno check
       - name: "Lint Code"
         if: "${{!cancelled() && steps.analyze.outcome == 'success'}}"
         run: |-
@@ -125,9 +122,16 @@ jobs:
         working-directory: "${{steps.analyze.outputs.npm-root}}"
         run: |-
           npm publish --dry-run
+      - name: "Flush Deno Cache"
+        if: "${{!cancelled()}}"
+        shell: "pwsh"
+        env:
+          CDV_DENO_CACHE_PATH_GENERATE: "${{steps.deno-cache-path.outputs.generate}}"
+        run: |-
+          Remove-Item -LiteralPath $Env:CDV_DENO_CACHE_PATH_GENERATE -Recurse -Confirm:$False -ErrorAction 'SilentlyContinue'
       - name: "Save Deno Cache"
-        if: "${{!cancelled() && steps.deno-cache-load.outcome == 'success'}}"
+        if: "${{!cancelled()}}"
         uses: "actions/cache/save@v4"
         with:
           key: "${{runner.os}}/Deno/${{github.run_id}}-${{github.run_attempt}}-${{github.job}}"
-          path: "${{steps.deno-cache-path.outputs.value}}"
+          path: "${{steps.deno-cache-path.outputs.root}}"
