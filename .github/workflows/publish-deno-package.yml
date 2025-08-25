@@ -206,8 +206,8 @@ jobs:
           CDV_SNAPSHOT_NPM: "${{needs.main.outputs.npm-snapshot}}"
         run: |-
           Invoke-RestMethod -Uri "https://api.github.com/repos/$($Env:GITHUB_REPOSITORY)/actions/artifacts/$($Env:CDV_SNAPSHOT_NPM)" -Headers @{
-            Accept = 'application/vnd.github+json',
-            Authorization = "Bearer $($Env:CDV_GHAAT)",
+            Accept = 'application/vnd.github+json';
+            Authorization = "Bearer $($Env:CDV_GHAAT)";
             'X-GitHub-Api-Version' = '2022-11-28'
           } -Method 'Delete'
         continue-on-error: true
