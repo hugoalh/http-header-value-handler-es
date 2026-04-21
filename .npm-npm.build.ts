@@ -1,15 +1,13 @@
-import {
-	getMetadataFromConfig,
-	invokeDenoNodeJSTransformer
-} from "DNT";
-const configJSR = await getMetadataFromConfig("jsr.jsonc");
+import { invokeDenoNodeJSTransformer } from "DNT";
+import { parse as parseJSONC } from "STD_JSONC";
+const jsrManifest = parseJSONC(await Deno.readTextFile("./jsr.jsonc"));
 await invokeDenoNodeJSTransformer({
-	copyAssets: [
+	copyEntries: [
 		"LICENSE.md",
 		"README.md"
 	],
-	entrypoints: configJSR.getExports(),
-	fixInjectedImports: true,
+	//@ts-ignore Lazy type.
+	entrypointsScript: jsrManifest.exports,
 	generateDeclarationMap: true,
 	mappings: {
 		"https://raw.githubusercontent.com/hugoalh/is-string-ascii-es/v1.1.5/printable.ts": {
@@ -19,8 +17,10 @@ await invokeDenoNodeJSTransformer({
 		}
 	},
 	metadata: {
-		name: configJSR.getName(),
-		version: configJSR.getVersion(),
+		//@ts-ignore Lazy type.
+		name: jsrManifest.name,
+		//@ts-ignore Lazy type.
+		version: jsrManifest.version,
 		description: "A module to handle the HTTP header value.",
 		keywords: [
 			"handle",
@@ -38,15 +38,11 @@ await invokeDenoNodeJSTransformer({
 			type: "git",
 			url: "git+https://github.com/hugoalh/http-header-value-handler-es.git"
 		},
-		scripts: {
-		},
-		engines: {
-		},
 		private: false,
 		publishConfig: {
 			access: "public"
 		}
 	},
-	outputDirectory: "dist/npm",
+	outputDirectory: "dist/npm-npm",
 	outputDirectoryPreEmpty: true
 });
