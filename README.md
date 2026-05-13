@@ -4,8 +4,8 @@
 
 🔗
 [GitHub](https://github.com/hugoalh/http-header-value-handler-es)
-[JSR](https://jsr.io/@hugoalh/http-header-value-handler)
-[NPM](https://www.npmjs.com/package/@hugoalh/http-header-value-handler)
+● [JSR](https://jsr.io/@hugoalh/http-header-value-handler)
+● [NPM](https://www.npmjs.com/package/@hugoalh/http-header-value-handler)
 
 An ECMAScript module to handle the HTTP header value.
 

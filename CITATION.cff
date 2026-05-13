@@ -8,11 +8,7 @@ authors:
 repository-code: "https://github.com/hugoalh/http-header-value-handler-es"
 keywords:
   - "ecmascript"
-  - "ecmascript-module"
   - "es"
-  - "es-module"
-  - "esm"
-  - "esmodule"
   - "handle"
   - "handler"
   - "header"
