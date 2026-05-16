@@ -54,16 +54,22 @@ This does not request any runtime permission.
 ## 🧩 APIs
 
 - ```ts
-  function parseHTTPHeaderValue(input: string, options: HTTPHeaderValueParseOptions = {}): HTTPHeaderValueElementContext[];
+  function parse(input: string, options?: HTTPHeaderValueOptions): HTTPHeaderValueElementContext[];
   ```
 - ```ts
-  function splitHTTPHeaderValue(input: string): (string | HTTPHeaderValueTokenParameter)[][];
+  function parseIterate(input: string, options?: HTTPHeaderValueOptions): Generator<HTTPHeaderValueElementContext>;
   ```
 - ```ts
-  function stringifyHTTPHeaderValueFromContexts(input: readonly HTTPHeaderValueElementContext[]): string;
+  function split(input: string): (string | HTTPHeaderValueParameterPair)[][];
   ```
 - ```ts
-  function stringifyHTTPHeaderValueFromTokens(input: readonly (readonly (string | HTTPHeaderValueTokenParameter)[])[]): string;
+  function splitIterate(input: string): Generator<(string | HTTPHeaderValueParameterPair)[]>;
+  ```
+- ```ts
+  function stringifyFromContexts(input: readonly HTTPHeaderValueElementContext[]): string;
+  ```
+- ```ts
+  function stringifyFromTokens(input: readonly (readonly (string | HTTPHeaderValueParameterPair)[])[]): string;
   ```
 - ```ts
   interface HTTPHeaderValueElementContext {
@@ -72,12 +78,12 @@ This does not request any runtime permission.
   }
   ```
 - ```ts
-  interface HTTPHeaderValueParseOptions {
-    parameterKeysCaseSensitive?: boolean;
+  interface HTTPHeaderValueOptions {
+    parametersKeyCaseSensitive?: boolean;
   }
   ```
 - ```ts
-  type HTTPHeaderValueTokenParameter = [key: string, value: string];
+  type HTTPHeaderValueParameterPair = [key: string, value: string];
   ```
 
 > [!NOTE]
@@ -88,7 +94,7 @@ This does not request any runtime permission.
 ## ✍️ Examples
 
 - ```ts
-  splitHTTPHeaderValueWithParameter(`text/html, application/xhtml+xml, application/xml;q=0.9, image/webp`);
+  split(`text/html, application/xhtml+xml, application/xml;q=0.9, image/webp`);
   //=>
   //  [
   //    ["text/html"],
