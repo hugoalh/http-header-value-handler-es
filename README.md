@@ -3,7 +3,8 @@
 [**⚖️** MIT](./LICENSE.md)
 
 🔗
-[GitHub](https://github.com/hugoalh/http-header-value-handler-es)
+[DistBoard @hugoalh](https://hugoalh.github.io/distboard/http_header_value_handler_ecmascript)
+● [GitHub](https://github.com/hugoalh/http-header-value-handler-es)
 ● [JSR](https://jsr.io/@hugoalh/http-header-value-handler)
 ● [NPM](https://www.npmjs.com/package/@hugoalh/http-header-value-handler)
 
