@@ -42,6 +42,10 @@ This does not request any runtime permission.
 | **Name** | **Path** | **Description** |
 |:--|:--|:--|
 | `.` | `./mod.ts` | Default. |
+| `./encode` | `./encode.ts` | Utilities for encode and decode. |
+| `./handle` | `./handle.ts` |  |
+| `./quote` | `./quote.ts` | Utilities for quote. |
+| `./split` | `./split.ts` |  |
 
 > [!NOTE]
 > - Different runtimes have vary support for the sources and entrypoints, visit the runtime documentation for more information.
@@ -54,36 +58,36 @@ This does not request any runtime permission.
 ## 🧩 APIs
 
 - ```ts
-  function parse(input: string, options?: HTTPHeaderValueOptions): HTTPHeaderValueElementContext[];
+  function parseHTTPHeaderValue(input: string, options?: HTTPHeaderValueHandlerOptions): HTTPHeaderValueElementContext[];
   ```
 - ```ts
-  function parseIterate(input: string, options?: HTTPHeaderValueOptions): Generator<HTTPHeaderValueElementContext>;
+  function parseHTTPHeaderValueIterate(input: string, options?: HTTPHeaderValueHandlerOptions): Generator<HTTPHeaderValueElementContext>;
   ```
 - ```ts
-  function split(input: string): (string | HTTPHeaderValueParameterPair)[][];
+  function splitHTTPHeaderValue(input: string): (string | HTTPHeaderValueParameterPair)[][];
   ```
 - ```ts
-  function splitIterate(input: string): Generator<(string | HTTPHeaderValueParameterPair)[]>;
+  function splitHTTPHeaderValueIterate(input: string): Generator<(string | HTTPHeaderValueParameterPair)[]>;
   ```
 - ```ts
-  function stringifyFromContexts(input: readonly HTTPHeaderValueElementContext[]): string;
-  ```
-- ```ts
-  function stringifyFromTokens(input: readonly (readonly (string | HTTPHeaderValueParameterPair)[])[]): string;
+  function stringifyHTTPHeaderValue(input: readonly HTTPHeaderValueElementContext[] | readonly (readonly (string | HTTPHeaderValueParameterPair)[])[], options?: HTTPHeaderValueHandlerOptions): string;
   ```
 - ```ts
   interface HTTPHeaderValueElementContext {
     value?: string;
-    parameters: Record<string, string>;
+    parameters: Record<string, string | undefined>;
   }
   ```
 - ```ts
-  interface HTTPHeaderValueOptions {
+  interface HTTPHeaderValueHandlerOptions {
     parametersKeyCaseSensitive?: boolean;
   }
   ```
 - ```ts
-  type HTTPHeaderValueParameterPair = [key: string, value: string];
+  interface HTTPHeaderValueParameterPair {
+    key: string;
+    value: string;
+  }
   ```
 
 > [!NOTE]
@@ -99,7 +103,7 @@ This does not request any runtime permission.
   //  [
   //    ["text/html"],
   //    ["application/xhtml+xml"],
-  //    ["application/xml", ["q", "0.9"]],
+  //    ["application/xml", { key: "q", value: "0.9" }],
   //    ["image/webp"]
   //  ]
   ```

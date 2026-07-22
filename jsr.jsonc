@@ -4,10 +4,14 @@
 	"version": "0.2.0",
 	"license": "MIT",
 	"exports": {
-		".": "./mod.ts"
+		".": "./mod.ts",
+		"./encode": "./encode.ts",
+		"./handle": "./handle.ts",
+		"./quote": "./quote.ts",
+		"./split": "./split.ts"
 	},
 	"imports": {
-		"https://raw.githubusercontent.com/hugoalh/is-string-ascii-es/v1.1.5/printable.ts": "jsr:@hugoalh/is-string-ascii@^1.1.5/printable"
+		"https://raw.githubusercontent.com/hugoalh/is-string-ascii-es/v1.1.6/printable.ts": "jsr:@hugoalh/is-string-ascii@^1.1.6/printable"
 	},
 	"publish": {
 		"exclude": [

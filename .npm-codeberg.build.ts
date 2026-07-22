@@ -28,21 +28,21 @@ await invokeDenoNodeJSTransformer({
 			"header",
 			"http"
 		],
-		homepage: "https://github.com/hugoalh/http-header-value-handler-es#readme",
+		homepage: "https://codeberg.org/hugoalh/http-header-value-handler-es#readme",
 		bugs: {
-			url: "https://github.com/hugoalh/http-header-value-handler-es/issues"
+			url: "https://codeberg.org/hugoalh/http-header-value-handler-es/issues"
 		},
 		license: "MIT",
 		author: "hugoalh",
 		repository: {
 			type: "git",
-			url: "git+https://github.com/hugoalh/http-header-value-handler-es.git"
+			url: "git+https://codeberg.org/hugoalh/http-header-value-handler-es.git"
 		},
 		private: false,
 		publishConfig: {
 			access: "public"
 		}
 	},
-	outputDirectory: "dist/npm-npm",
+	outputDirectory: "dist/npm-codeberg",
 	outputDirectoryPreEmpty: true
 });
