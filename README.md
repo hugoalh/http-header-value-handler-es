@@ -43,9 +43,9 @@ This does not request any runtime permission.
 |:--|:--|:--|
 | `.` | `./mod.ts` | Default. |
 | `./encode` | `./encode.ts` | Utilities for encode and decode. |
-| `./handle` | `./handle.ts` |  |
+| `./handle` | `./handle.ts` | Utilities for parse and stringify. |
 | `./quote` | `./quote.ts` | Utilities for quote. |
-| `./split` | `./split.ts` |  |
+| `./split` | `./split.ts` | Utilities for split. |
 
 > [!NOTE]
 > - Different runtimes have vary support for the sources and entrypoints, visit the runtime documentation for more information.
