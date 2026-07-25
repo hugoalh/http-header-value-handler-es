@@ -98,7 +98,7 @@ This does not request any runtime permission.
 ## ✍️ Examples
 
 - ```ts
-  split(`text/html, application/xhtml+xml, application/xml;q=0.9, image/webp`);
+  splitHTTPHeaderValue(`text/html, application/xhtml+xml, application/xml;q=0.9, image/webp`);
   //=>
   //  [
   //    ["text/html"],
