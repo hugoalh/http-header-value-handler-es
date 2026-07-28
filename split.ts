@@ -20,171 +20,6 @@ export interface HTTPHeaderValueParameterPair {
 	key: string;
 	value: string;
 }
-class HTTPHeaderValueSplitter {
-	#index: number = 0;
-	#input: string;
-	constructor(input: string) {
-		this.#input = input;
-	}
-	#getBracketedLengthSpecify(pair: BracketPair, index: number = this.#index): number {
-		const {
-			open,
-			close
-		}: BracketPair = pair;
-		if (this.#input[index] !== open) {
-			return 0;
-		}
-		let cursor: number = index + 1;
-		let stack: number = 1;
-		while (cursor < this.#input.length) {
-			const lengthDoubleQuote: number = this.#getDoubleQuotedLength(cursor);
-			if (lengthDoubleQuote > 0) {
-				cursor += lengthDoubleQuote;
-				continue;
-			}
-			if (this.#input[cursor] === open) {
-				cursor += 1;
-				stack += 1;
-				continue;
-			}
-			if (this.#input[cursor] === close) {
-				cursor += 1;
-				stack -= 1;
-				if (stack === 0) {
-					return cursor - index;
-				}
-				continue;
-			}
-			cursor += 1;
-		}
-		return 0;
-	}
-	#getBracketedLengthAny(index: number = this.#index): number {
-		return Math.max(...brackets.map((pair: BracketPair): number => {
-			return this.#getBracketedLengthSpecify(pair, index);
-		}));
-	}
-	#getDoubleQuotedLength(index: number = this.#index): number {
-		if (this.#input[index] !== "\"") {
-			return 0;
-		}
-		let cursor: number = index + 1;
-		while (cursor < this.#input.length) {
-			if (this.#input[cursor] === "\"" && this.#input[cursor - 1] !== "\\") {
-				return cursor + 1 - index;
-			}
-			cursor += 1;
-		}
-		return 0;
-	}
-	#getText(index: number = this.#index): string {
-		let cursor: number = index;
-		while (cursor < this.#input.length) {
-			if (isCharacterSeparator(this.#input[cursor])) {
-				break;
-			}
-			const lengthBracket: number = this.#getBracketedLengthAny(cursor);
-			if (lengthBracket > 0) {
-				cursor += lengthBracket;
-				continue;
-			}
-			const lengthQuote: number = this.#getDoubleQuotedLength(cursor);
-			if (lengthQuote > 0) {
-				cursor += lengthQuote;
-				continue;
-			}
-			cursor += 1;
-		}
-		const value: string = this.#input.slice(this.#index, cursor).trimEnd();
-		this.#index += value.length;
-		return value;
-	}
-	#isSeparator(index: number = this.#index): boolean {
-		return isCharacterSeparator(this.#input[index]);
-	}
-	#skipWhitespace(): void {
-		const item: string = this.#input.slice(this.#index);
-		this.#index += item.length - item.trimStart().length;
-	}
-	*split(): Generator<(string | HTTPHeaderValueParameterPair)[]> {
-		this.#skipWhitespace();
-		if (this.#isSeparator()) {
-			throw new SyntaxError(`Unexpected HTTP header value separator \`${this.#input[this.#index]}\` at index ${this.#index}!`);
-		}
-		while (this.#index < this.#input.length) {
-			const group: (string | HTTPHeaderValueParameterPair)[] = [];
-			while (this.#index < this.#input.length) {
-				const key: string = this.#getText();
-				if (key.length === 0) {
-					throw new SyntaxError(`Unexpected empty text at index ${this.#index}!`);
-				}
-				const keyFmt: string = deDoubleQuoteNonStrict(key) ?? key;
-				this.#skipWhitespace();
-				if (!(this.#index < this.#input.length)) {
-					group.push(keyFmt);
-					break;
-				}
-				if (!this.#isSeparator()) {
-					throw new SyntaxError(`Unexpected character \`${this.#input[this.#index]}\` at index ${this.#index}!`);
-				}
-				if (this.#input[this.#index] === ",") {
-					group.push(keyFmt);
-					break;
-				}
-				if (this.#input[this.#index] === ";") {
-					group.push(keyFmt);
-					this.#index += 1;
-					this.#skipWhitespace();
-					if (!(this.#index < this.#input.length)) {
-						throw new SyntaxError(`Unexpected end after HTTP header value separator \`;\` at index ${this.#index}!`);
-					}
-					continue;
-				}
-				this.#index += 1;
-				this.#skipWhitespace();
-				if (!(this.#index < this.#input.length)) {
-					throw new SyntaxError(`Unexpected end after HTTP header value separator \`=\` at index ${this.#index}!`);
-				}
-				const value: string = this.#getText();
-				if (value.length === 0) {
-					throw new SyntaxError(`Unexpected empty text at index ${this.#index}!`);
-				}
-				group.push({
-					key,
-					value: deDoubleQuoteNonStrict(value) ?? value
-				});
-				this.#skipWhitespace();
-				if (!(this.#index < this.#input.length)) {
-					break;
-				}
-				if (!this.#isSeparator()) {
-					throw new SyntaxError(`Unexpected character \`${this.#input[this.#index]}\` at index ${this.#index}!`);
-				}
-				if (this.#input[this.#index] === "=") {
-					throw new SyntaxError(`Unexpected HTTP header value separator \`${this.#input[this.#index]}\` at index ${this.#index}!`);
-				}
-				if (this.#input[this.#index] === ",") {
-					break;
-				}
-				this.#index += 1;
-				this.#skipWhitespace();
-				if (!(this.#index < this.#input.length)) {
-					throw new SyntaxError(`Unexpected end after HTTP header value separator \`;\` at index ${this.#index}!`);
-				}
-			}
-			if (group.length > 0) {
-				yield group;
-			}
-			if (this.#input[this.#index] === ",") {
-				this.#index += 1;
-				this.#skipWhitespace();
-				if (!(this.#index < this.#input.length)) {
-					throw new SyntaxError(`Unexpected end after HTTP header value separator \`,\` at index ${this.#index}!`);
-				}
-			}
-		}
-	}
-}
 /**
  * Split the HTTP header value, in iterate.
  * @param {string} input HTTP header value that need to split.
@@ -200,8 +35,164 @@ class HTTPHeaderValueSplitter {
  * //  ]
  * ```
  */
-export function splitHTTPHeaderValueIterate(input: string): Generator<(string | HTTPHeaderValueParameterPair)[]> {
-	return new HTTPHeaderValueSplitter(input).split();
+export function* splitHTTPHeaderValueIterate(input: string): Generator<(string | HTTPHeaderValueParameterPair)[]> {
+	let index: number = 0;
+	function getBracketedLengthSpecify(pair: BracketPair, indexAt: number = index): number {
+		const {
+			open,
+			close
+		}: BracketPair = pair;
+		if (input[indexAt] !== open) {
+			return 0;
+		}
+		let cursor: number = indexAt + 1;
+		let stack: number = 1;
+		while (cursor < input.length) {
+			const lengthDoubleQuote: number = getDoubleQuotedLength(cursor);
+			if (lengthDoubleQuote > 0) {
+				cursor += lengthDoubleQuote;
+				continue;
+			}
+			if (input[cursor] === open) {
+				cursor += 1;
+				stack += 1;
+				continue;
+			}
+			if (input[cursor] === close) {
+				cursor += 1;
+				stack -= 1;
+				if (stack === 0) {
+					return cursor - indexAt;
+				}
+				continue;
+			}
+			cursor += 1;
+		}
+		return 0;
+	}
+	function getBracketedLengthAny(indexAt: number = index): number {
+		return Math.max(...brackets.map((pair: BracketPair): number => {
+			return getBracketedLengthSpecify(pair, indexAt);
+		}));
+	}
+	function getDoubleQuotedLength(indexAt: number = index): number {
+		if (input[indexAt] !== "\"") {
+			return 0;
+		}
+		let cursor: number = indexAt + 1;
+		while (cursor < input.length) {
+			if (input[cursor] === "\"" && input[cursor - 1] !== "\\") {
+				return cursor + 1 - indexAt;
+			}
+			cursor += 1;
+		}
+		return 0;
+	}
+	function getText(): string {
+		let cursor: number = index;
+		while (cursor < input.length) {
+			if (isCharacterSeparator(input[cursor])) {
+				break;
+			}
+			const lengthBracket: number = getBracketedLengthAny(cursor);
+			if (lengthBracket > 0) {
+				cursor += lengthBracket;
+				continue;
+			}
+			const lengthQuote: number = getDoubleQuotedLength(cursor);
+			if (lengthQuote > 0) {
+				cursor += lengthQuote;
+				continue;
+			}
+			cursor += 1;
+		}
+		const value: string = input.slice(index, cursor).trimEnd();
+		index += value.length;
+		return value;
+	}
+	function isSeparator(indexAt: number = index): boolean {
+		return isCharacterSeparator(input[indexAt]);
+	}
+	function skipWhitespace(): void {
+		const item: string = input.slice(index);
+		index += item.length - item.trimStart().length;
+	}
+	skipWhitespace();
+	if (isSeparator()) {
+		throw new SyntaxError(`Unexpected HTTP header value separator \`${input[index]}\` at index ${index}!`);
+	}
+	while (index < input.length) {
+		const group: (string | HTTPHeaderValueParameterPair)[] = [];
+		while (index < input.length) {
+			const key: string = getText();
+			if (key.length === 0) {
+				throw new SyntaxError(`Unexpected empty text at index ${index}!`);
+			}
+			const keyFmt: string = deDoubleQuoteNonStrict(key) ?? key;
+			skipWhitespace();
+			if (!(index < input.length)) {
+				group.push(keyFmt);
+				break;
+			}
+			if (!isSeparator()) {
+				throw new SyntaxError(`Unexpected character \`${input[index]}\` at index ${index}!`);
+			}
+			if (input[index] === ",") {
+				group.push(keyFmt);
+				break;
+			}
+			if (input[index] === ";") {
+				group.push(keyFmt);
+				index += 1;
+				skipWhitespace();
+				if (!(index < input.length)) {
+					throw new SyntaxError(`Unexpected end after HTTP header value separator \`;\` at index ${index}!`);
+				}
+				continue;
+			}
+			index += 1;
+			skipWhitespace();
+			if (!(index < input.length)) {
+				throw new SyntaxError(`Unexpected end after HTTP header value separator \`=\` at index ${index}!`);
+			}
+			const value: string = getText();
+			if (value.length === 0) {
+				throw new SyntaxError(`Unexpected empty text at index ${index}!`);
+			}
+			group.push({
+				key,
+				value: deDoubleQuoteNonStrict(value) ?? value
+			});
+			skipWhitespace();
+			if (!(index < input.length)) {
+				break;
+			}
+			if (!isSeparator()) {
+				throw new SyntaxError(`Unexpected character \`${input[index]}\` at index ${index}!`);
+			}
+			if (input[index] === "=") {
+				throw new SyntaxError(`Unexpected HTTP header value separator \`${input[index]}\` at index ${index}!`);
+			}
+			if (input[index] === ",") {
+				break;
+			}
+			index += 1;
+			skipWhitespace();
+			if (!(index < input.length)) {
+				throw new SyntaxError(`Unexpected end after HTTP header value separator \`;\` at index ${index}!`);
+			}
+		}
+		if (group.length > 0) {
+			yield group;
+		}
+		if (input[index] === ",") {
+			index += 1;
+			skipWhitespace();
+			if (!(index < input.length)) {
+				throw new SyntaxError(`Unexpected end after HTTP header value separator \`,\` at index ${index}!`);
+			}
+		}
+	}
 }
 /**
  * Split the HTTP header value.
