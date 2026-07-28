@@ -152,9 +152,9 @@ function stringifyHTTPHeaderValueInternal(input: readonly (readonly (string | HT
 			}
 			const valueFmt: string | null = encodeHTTPHeaderValueParameterValueNonStrict(value);
 			if (valueFmt === null) {
-				return `${enDoubleQuoteNonStrict(keyFmt)}=${value}`;
+				return `${enDoubleQuoteNonStrict(keyFmt) ?? keyFmt}=${value}`;
 			}
-			return `${enDoubleQuoteNonStrict(`${keyFmt}*`)}=${valueFmt}`;
+			return `${enDoubleQuoteNonStrict(`${keyFmt}*`) ?? `${keyFmt}*`}=${valueFmt}`;
 		}).filter((element: string): boolean => {
 			return (element.length > 0);
 		}).join("; ");
