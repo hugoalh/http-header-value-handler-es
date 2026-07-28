@@ -57,17 +57,16 @@ export interface HTTPHeaderValueElementContext {
  */
 export function* parseHTTPHeaderValueIterate(input: string, options: HTTPHeaderValueHandlerOptions = {}): Generator<HTTPHeaderValueElementContext> {
 	const { parametersKeyCaseSensitive = false }: HTTPHeaderValueHandlerOptions = options;
-	for (const [
-		groupFirst,
-		...groupRest
-	] of splitHTTPHeaderValueIterate(input)) {
+	for (const group of splitHTTPHeaderValueIterate(input)) {
 		const result: HTTPHeaderValueElementContext = {
 			parameters: {}
 		};
-		if (typeof groupFirst === "string") {
-			result.value = groupFirst;
+		if (typeof group[0] === "string") {
+			result.value = group[0];
 		}
-		for (const element of ((typeof groupFirst === "string") ? groupRest : [groupFirst, ...groupRest])) {
+		const parametersKeyTokenEncode: Set<string> = new Set<string>();
+		const parametersKeyTokenNormal: Set<string> = new Set<string>();
+		for (const element of ((typeof group[0] === "string") ? group : group.slice(1))) {
 			let key: string;
 			let value: string;
 			if (typeof element === "string") {
@@ -79,6 +78,10 @@ export function* parseHTTPHeaderValueIterate(input: string, options: HTTPHeaderV
 			}
 			key = parametersKeyCaseSensitive ? key : key.toLowerCase();
 			if (key.endsWith("*")) {
+				if (parametersKeyTokenEncode.has(key)) {
+					throw new SyntaxError(`Parameter key \`${key}\` is duplicated!`);
+				}
+				parametersKeyTokenEncode.add(key);
 				try {
 					value = decodeHTTPHeaderValueParameterValue(value).value;
 				} catch {
@@ -86,9 +89,10 @@ export function* parseHTTPHeaderValueIterate(input: string, options: HTTPHeaderV
 				}
 				key = key.slice(0, key.length - 1);
 			} else {
-				if (typeof result.parameters[key] !== "undefined") {
+				if (parametersKeyTokenNormal.has(key)) {
 					throw new SyntaxError(`Parameter key \`${key}\` is duplicated!`);
 				}
+				parametersKeyTokenNormal.add(key);
 			}
 			result.parameters[key] = value;
 		}
@@ -146,7 +150,7 @@ function stringifyHTTPHeaderValueInternal(input: readonly (readonly (string | HT
 			if (key.length === 0) {
 				throw new Error(`Parameter \`input[${indexGroup}][${indexElement}].key\` is empty!`);
 			}
-			const keyFmt = parametersKeyCaseSensitive ? key : key.toLowerCase();
+			const keyFmt: string = parametersKeyCaseSensitive ? key : key.toLowerCase();
 			if (value.length === 0) {
 				return (`${enDoubleQuoteNonStrict(keyFmt) ?? keyFmt}`);
 			}

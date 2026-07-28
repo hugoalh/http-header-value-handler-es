@@ -3,7 +3,7 @@ interface BracketPair {
 	open: string;
 	close: string;
 }
-const brackets: readonly BracketPair[] = [
+const brackets: readonly BracketPair[] = [/* UNIQUE */
 	{ open: "(", close: ")" },
 	{ open: "<", close: ">" },
 	{ open: "[", close: "]" },
@@ -117,6 +117,16 @@ export function* splitHTTPHeaderValueIterate(input: string): Generator<(string |
 		const item: string = input.slice(index);
 		index += item.length - item.trimStart().length;
 	}
+	function throwOnEndAfterSeparator(separator: string): void {
+		if (!(index < input.length)) {
+			throw new SyntaxError(`Unexpected end after HTTP header value separator \`${separator}\` at index ${index}!`);
+		}
+	}
+	function throwOnNonSeparator(): void {
+		if (!isSeparator()) {
+			throw new SyntaxError(`Unexpected character \`${input[index]}\` at index ${index}!`);
+		}
+	}
 	skipWhitespace();
 	if (isSeparator()) {
 		throw new SyntaxError(`Unexpected HTTP header value separator \`${input[index]}\` at index ${index}!`);
@@ -134,9 +144,7 @@ export function* splitHTTPHeaderValueIterate(input: string): Generator<(string |
 				group.push(keyFmt);
 				break;
 			}
-			if (!isSeparator()) {
-				throw new SyntaxError(`Unexpected character \`${input[index]}\` at index ${index}!`);
-			}
+			throwOnNonSeparator();
 			if (input[index] === ",") {
 				group.push(keyFmt);
 				break;
@@ -145,16 +153,12 @@ export function* splitHTTPHeaderValueIterate(input: string): Generator<(string |
 				group.push(keyFmt);
 				index += 1;
 				skipWhitespace();
-				if (!(index < input.length)) {
-					throw new SyntaxError(`Unexpected end after HTTP header value separator \`;\` at index ${index}!`);
-				}
+				throwOnEndAfterSeparator(";");
 				continue;
 			}
 			index += 1;
 			skipWhitespace();
-			if (!(index < input.length)) {
-				throw new SyntaxError(`Unexpected end after HTTP header value separator \`=\` at index ${index}!`);
-			}
+			throwOnEndAfterSeparator("=");
 			const value: string = getText();
 			if (value.length === 0) {
 				throw new SyntaxError(`Unexpected empty text at index ${index}!`);
@@ -167,9 +171,7 @@ export function* splitHTTPHeaderValueIterate(input: string): Generator<(string |
 			if (!(index < input.length)) {
 				break;
 			}
-			if (!isSeparator()) {
-				throw new SyntaxError(`Unexpected character \`${input[index]}\` at index ${index}!`);
-			}
+			throwOnNonSeparator();
 			if (input[index] === "=") {
 				throw new SyntaxError(`Unexpected HTTP header value separator \`${input[index]}\` at index ${index}!`);
 			}
@@ -178,9 +180,7 @@ export function* splitHTTPHeaderValueIterate(input: string): Generator<(string |
 			}
 			index += 1;
 			skipWhitespace();
-			if (!(index < input.length)) {
-				throw new SyntaxError(`Unexpected end after HTTP header value separator \`;\` at index ${index}!`);
-			}
+			throwOnEndAfterSeparator(";");
 		}
 		if (group.length > 0) {
 			yield group;
@@ -188,9 +188,7 @@ export function* splitHTTPHeaderValueIterate(input: string): Generator<(string |
 		if (input[index] === ",") {
 			index += 1;
 			skipWhitespace();
-			if (!(index < input.length)) {
-				throw new SyntaxError(`Unexpected end after HTTP header value separator \`,\` at index ${index}!`);
-			}
+			throwOnEndAfterSeparator(",");
 		}
 	}
 }
