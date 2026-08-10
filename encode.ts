@@ -1,4 +1,4 @@
-import { isStringASCIIPrintable } from "https://raw.githubusercontent.com/hugoalh/is-string-ascii-es/v1.1.6/printable.ts";
+import { isStringASCIIPrintable } from "jsr:@hugoalh/is-string-ascii@^1.1.6/printable";
 export interface HTTPHeaderValueParameterValueDecodedContext {
 	/**
 	 * Language tag, according to the specification RFC 5646; However this value is never verified here and can be an arbitrary string.

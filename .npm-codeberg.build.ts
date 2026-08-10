@@ -12,7 +12,7 @@ await transform({
 	entrypointsScript: manifest.exports,
 	generateDeclarationMap: true,
 	mappings: {
-		"https://raw.githubusercontent.com/hugoalh/is-string-ascii-es/v1.1.6/printable.ts": {
+		"jsr:@hugoalh/is-string-ascii@^1.1.6/printable": {
 			name: "@hugoalh/is-string-ascii",
 			version: "^1.1.6",
 			subPath: "printable"
